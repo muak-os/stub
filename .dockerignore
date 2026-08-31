@@ -1,0 +1,41 @@
+# Build artifacts
+target/
+**/target/
+_out/
+
+# Rust incremental compilation
+**/incremental/
+**/.cargo/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+
+# CI/CD
+.github/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+
+# Test files
+**/tests/
+**/*_test.rs
+**/*_bench.rs
+
+# Temporary files
+*.tmp
+tmp/
+*.temp
+.cache/

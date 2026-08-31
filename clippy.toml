@@ -1,0 +1,7 @@
+absolute-paths-allowed-crates = ["std", "core", "alloc"]
+absolute-paths-max-segments = 3
+allow-panic-in-tests = true
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allowed-idents-below-min-chars = ["..", "e"]
+excessive-nesting-threshold = 3
