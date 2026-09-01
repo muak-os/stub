@@ -8,7 +8,7 @@ use crate::pe::loader::cmdline::strip_trailing_terminators;
 const LUKS_KEY_PREFIX: &[u8] = b" luks.key=";
 
 /// Reads the LUKS key from the ESP `luks` file and injects it into the kernel cmdline.
-pub fn try_inject(cmdline: Option<&[u8]>) -> Result<Option<Vec<u8>>> {
+pub(super) fn try_inject(cmdline: Option<&[u8]>) -> Result<Option<Vec<u8>>> {
     let Some(luks_data) = read_key()? else {
         return Ok(None);
     };

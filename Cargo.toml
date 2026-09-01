@@ -35,7 +35,12 @@ uefi = "0.37"
 object = { version = "0.39", default-features = false, features = ["read", "pe"] }
 
 [features]
+default = ["tpm", "muak"]
 uefi = []
+# TPM2 PCR measurement of UKI sections.
+tpm = []
+# LUKS key injection from the ESP when TPM sealing is unavailable.
+muak = ["tpm"]
 
 [lints.clippy]
 cargo = { level = "warn", priority = -1 }

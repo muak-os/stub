@@ -1,12 +1,13 @@
-//! UEFI stub for Muak - Loads and starts a kernel from a Unified Kernel Image.
+//! UEFI boot stub - Loads and starts a kernel from a Unified Kernel Image.
 
 #![feature(uefi_std)]
 
 mod loadfile2;
 mod log;
-mod luks;
 mod pe;
+mod policy;
 mod security;
+#[cfg(feature = "tpm")]
 mod tpm2;
 
 use core::slice;
@@ -46,7 +47,7 @@ fn setup_uefi_crate() -> Result<()> {
 fn main() -> Result<()> {
     setup_uefi_crate()?;
 
-    info!("Muak stub v{} starting...", env!("CARGO_PKG_VERSION"));
+    info!("Stub v{} starting...", env!("CARGO_PKG_VERSION"));
 
     let image_handle = image_handle();
 
@@ -80,6 +81,7 @@ fn main() -> Result<()> {
     let image_data = unsafe { slice::from_raw_parts(base_addr.cast::<u8>(), image_size) };
     let sections = uki::section::Sections::parse(image_data)?;
 
+    #[cfg(feature = "tpm")]
     for (name, data) in sections.iter_sections() {
         match tpm2::measure_section(name, data) {
             Ok(()) => info!("TPM2: measured {} ({} bytes) into PCR#11", name, data.len()),
@@ -103,18 +105,9 @@ fn main() -> Result<()> {
         loadfile2::install(initrd_bytes, &LINUX_INITRD_GUID)?;
     }
 
-    let combined_cmdline: Vec<u8>;
-    let cmdline: Option<&[u8]> = if tpm2::is_available() {
-        sections.cmdline
-    } else if let Some(combined) = luks::try_inject(sections.cmdline)? {
-        info!("LUKS key read from ESP file");
-        combined_cmdline = combined;
-        Some(&combined_cmdline)
-    } else {
-        sections.cmdline
-    };
+    let cmdline = policy::cmdline(sections.cmdline)?;
 
-    pe::loader::start(&kernel, cmdline, loaded_image, image_handle)?;
+    pe::loader::start(&kernel, cmdline.as_deref(), loaded_image, image_handle)?;
 
     Err(anyhow!(
         "Kernel entry point returned, which should never happen"

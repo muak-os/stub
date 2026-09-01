@@ -104,12 +104,14 @@ format:
 lint: format
     printf "{{ cyan }}Running lints{{ reset }}\n"
     cargo clippy --all-targets --target {{ arch }}-unknown-uefi --features uefi
+    cargo clippy --all-targets --target {{ arch }}-unknown-uefi --no-default-features --features uefi
 
 # Run tests
 [script]
 test:
     printf "{{ cyan }}Running tests{{ reset }}\n"
     cargo nextest run
+    cargo nextest run --no-default-features
 
 # Run tests with coverage (e.g., just coverage, just coverage --missing)
 [arg("missing", long="missing", value="--show-missing-lines")]
