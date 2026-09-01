@@ -26,7 +26,7 @@ anyhow = "1.0"
 base64ct = { version = "1.8", features = ["std"] }
 
 # Internal
-uki = { git = "https://github.com/muak-os/muak.git", default-features = false }
+uki = { git = "https://github.com/muak-os/muak.git", rev = "b16badfe8427bc2b1f219c9af45b46a472c72745", default-features = false }
 
 # System/platform APIs
 uefi = "0.37"

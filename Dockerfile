@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile-upstream:1.22.0-labs
 
-ARG RUST_VERSION
-ARG ALPINE_VERSION
+ARG RUST_VERSION=1.98
+ARG ALPINE_VERSION=3.24
 ARG SOURCE_DATE_EPOCH=0
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -42,12 +42,13 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 FROM deps AS builder
 
 COPY --from=planner /build/recipe.json recipe.json
+COPY Cargo.lock Cargo.lock
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
   --mount=type=cache,target=/usr/local/cargo/git \
   --mount=type=cache,target=/build/target \
   cargo +${NIGHTLY} chef cook --release --target ${UEFI_TARGET} --features uefi \
-   --package stub --recipe-path recipe.json
+  --package stub --recipe-path recipe.json
 
 COPY . .
 
