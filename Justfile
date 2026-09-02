@@ -1,6 +1,6 @@
 # Muak UEFI boot stub
 #
-# Prerequisites: rustup (nightly toolchain), docker/podman
+# Prerequisites: rustup, docker/podman
 # Run `just --list` for available recipes
 
 set positional-arguments := true
@@ -10,6 +10,8 @@ set script-interpreter := ["bash", "-euo", "pipefail"]
 # ─────────────────────────────────────────────────────────────────────────────
 # Configuration
 # ─────────────────────────────────────────────────────────────────────────────
+
+# Global settings
 
 alpine_version := "3.24"
 rust_version := `grep -oP 'rust-version\s*=\s*"\K[^"]+' Cargo.toml`
@@ -48,7 +50,7 @@ reset := '\e[0m'
 [script]
 build release="":
     printf "{{ cyan }}Building UEFI stub ({{ arch }}-unknown-uefi){{ reset }}\n"
-    cargo build {{ release }} --target {{ arch }}-unknown-uefi --features uefi
+    CARGO_BUILD_SBOM=true cargo build {{ release }} -Z sbom --target {{ arch }}-unknown-uefi --features uefi
     printf "{{ green }}Stub built successfully!{{ reset }}\n"
 
 # Build (and optionally push) the stub OCI image
