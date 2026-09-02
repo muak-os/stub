@@ -30,7 +30,7 @@ base64ct = { version = "1.8", features = ["std"] }
 uki = { git = "https://github.com/muak-os/muak.git", rev = "b16badfe8427bc2b1f219c9af45b46a472c72745", default-features = false }
 
 # System/platform APIs
-uefi = "0.37"
+uefi = "0.40"
 
 # Utilities
 object = { version = "0.39", default-features = false, features = ["read", "pe"] }
