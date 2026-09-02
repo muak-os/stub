@@ -12,7 +12,7 @@ set script-interpreter := ["bash", "-euo", "pipefail"]
 # ─────────────────────────────────────────────────────────────────────────────
 
 alpine_version := "3.24"
-rust_version := "1.98"
+rust_version := `grep -oP 'rust-version\s*=\s*"\K[^"]+' Cargo.toml`
 registry := env_var_or_default("REGISTRY", "ghcr.io/muak-os")
 tag := env_var_or_default("TAG", "latest")
 push := env_var_or_default("PUSH", "false")
