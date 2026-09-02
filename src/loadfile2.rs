@@ -1,17 +1,20 @@
 use core::ffi::c_void;
+use core::mem::MaybeUninit;
 use core::ptr;
+use core::slice;
 use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 
 use anyhow::{Context as _, Result};
 use uefi::boot::{self, MemoryType};
-use uefi::{Guid, Handle, Status};
+use uefi::proto::device_path::DevicePath;
+use uefi::proto::device_path::build::DevicePathBuilder;
+use uefi::proto::device_path::build::media::Vendor;
+use uefi::proto::media::load_file::LoadFile2;
+use uefi::{Guid, Handle, Identify as _, Status};
 
 use crate::{error, info};
 
-const LOAD_FILE2_PROTOCOL_GUID: Guid = Guid::parse_or_panic("4006c0c1-fcb3-403e-996d-4a6c8724e06d");
-
-const DEVICE_PATH_PROTOCOL_GUID: Guid =
-    Guid::parse_or_panic("09576e91-6d3f-11d2-8e39-00a0c969723b");
+// Device path: 20 bytes (vendor media node) + 4 bytes (end node) = 24 bytes
 const DEVICE_PATH_LEN: usize = 24;
 
 #[repr(C)]
@@ -93,40 +96,6 @@ unsafe extern "efiapi" fn load_file2_callback(
     Status::SUCCESS
 }
 
-/// Builds a vendor media device path with the given GUID.
-///
-/// The device path consists of:
-/// - Vendor media device path node (type 4, subtype 3) with the specified GUID
-/// - End of device path node (type 0x7F, subtype 0xFF)
-fn build_device_path(guid: &Guid) -> Result<*mut u8> {
-    // Device path: 20 bytes (vendor media) + 4 bytes (end node) = 24 bytes
-    let dp_ptr = boot::allocate_pool(MemoryType::BOOT_SERVICES_DATA, DEVICE_PATH_LEN)
-        .context("Failed to allocate pool for device path")?
-        .as_ptr();
-
-    let mut device_path = [0_u8; DEVICE_PATH_LEN];
-    device_path
-        .get_mut(..4)
-        .context("invalid device path header range")?
-        .copy_from_slice(&[4, 3, 20, 0]);
-    device_path
-        .get_mut(4..20)
-        .context("invalid device path GUID range")?
-        .copy_from_slice(&guid.to_bytes());
-    device_path
-        .get_mut(20..DEVICE_PATH_LEN)
-        .context("invalid device path terminator range")?
-        .copy_from_slice(&[0x7F, 0xFF, 4, 0]);
-
-    // SAFETY: `dp_ptr` was allocated with `allocate_pool` and is valid for `DEVICE_PATH_LEN`
-    // bytes. The source array has exactly the same length.
-    unsafe {
-        ptr::copy_nonoverlapping(device_path.as_ptr(), dp_ptr, DEVICE_PATH_LEN);
-    }
-
-    Ok(dp_ptr)
-}
-
 /// Installs a `LoadFile2` protocol for serving data via a vendor media GUID.
 ///
 /// This creates a new handle with both `DevicePath` and `LoadFile2` protocols installed.
@@ -154,22 +123,40 @@ pub fn install(data: &[u8], guid: &Guid) -> Result<Handle> {
 
     // SAFETY: Protocol installation follows UEFI specifications and `dp_ptr` points to a valid
     // device path allocation that outlives the boot services phase.
-    let handle = unsafe {
-        boot::install_protocol_interface(None, &DEVICE_PATH_PROTOCOL_GUID, dp_ptr.cast::<c_void>())
-    }
-    .context("Failed to install DevicePath protocol")?;
+    let handle = unsafe { boot::install_protocol_interface(None, &DevicePath::GUID, dp_ptr) }
+        .context("Failed to install DevicePath protocol")?;
 
     let protocol_ptr = ptr::from_ref(&LOAD_FILE2_PROTOCOL).cast::<c_void>();
     // SAFETY: `protocol_ptr` points to a static protocol table that remains valid for the boot
     // services phase.
-    unsafe {
-        boot::install_protocol_interface(Some(handle), &LOAD_FILE2_PROTOCOL_GUID, protocol_ptr)
-    }
-    .context("Failed to install LoadFile2 protocol")?;
+    unsafe { boot::install_protocol_interface(Some(handle), &LoadFile2::GUID, protocol_ptr) }
+        .context("Failed to install LoadFile2 protocol")?;
 
     info!("LoadFile2 installed on handle {:p}", handle.as_ptr());
 
     Ok(handle)
+}
+
+fn build_device_path(guid: &Guid) -> Result<*mut c_void> {
+    let dp_ptr = boot::allocate_pool(MemoryType::BOOT_SERVICES_DATA, DEVICE_PATH_LEN)
+        .context("Failed to allocate pool for device path")?
+        .as_ptr();
+
+    // SAFETY: `dp_ptr` was allocated with `allocate_pool` and is valid and writable for
+    // `DEVICE_PATH_LEN` bytes.
+    let pool =
+        unsafe { slice::from_raw_parts_mut(dp_ptr.cast::<MaybeUninit<u8>>(), DEVICE_PATH_LEN) };
+
+    let device_path = DevicePathBuilder::with_buf(pool)
+        .push(&Vendor {
+            vendor_guid: *guid,
+            vendor_defined_data: &[],
+        })
+        .context("Failed to build vendor media device path node")?
+        .finalize()
+        .context("Failed to finalize device path")?;
+
+    Ok(device_path.as_ffi_ptr().cast_mut().cast::<c_void>())
 }
 
 #[cfg(test)]
