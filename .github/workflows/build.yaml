@@ -64,7 +64,7 @@ jobs:
           CONTAINER_RUNTIME=docker \
           ARCH=${{ matrix.arch }} \
           PUSH=true \
-          TAG=ci \
+          TAG=ci-${{ matrix.arch }} \
           just oci
 
   manifest:

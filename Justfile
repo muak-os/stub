@@ -28,7 +28,6 @@ out := `test -f .git && realpath -m "$(git rev-parse --git-common-dir)/../_out" 
 [private]
 _arch := env_var_or_default("ARCH", "")
 arch := if _arch == "amd64" { "x86_64" } else if _arch == "arm64" { "aarch64" } else if _arch != "" { _arch } else { "x86_64" }
-oci_suffix := if _arch != "" { "-" + _arch } else { "" }
 oci_arch := if _arch == "arm64" { "arm64" } else { "amd64" }
 
 # Container runtime
@@ -47,6 +46,9 @@ reset := '\e[0m'
 # Main Recipes
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Full local development build (build → oci → annotate)
+dev: (build "--release") oci annotate
+
 # Build the UEFI stub (e.g., just build, just build --release)
 [arg("release", long="release", value="--release")]
 [script]
@@ -62,10 +64,10 @@ build release="":
 # Build (and optionally push) the stub OCI image
 [script]
 oci:
-    image="{{ registry }}/stub:{{ tag }}{{ oci_suffix }}"
+    image="{{ registry }}/stub:{{ tag }}"
     tags="--tag ${image}"
     if [ "{{ latest }}" = "true" ]; then
-        tags="${tags} --tag {{ registry }}/stub:latest{{ oci_suffix }}"
+        tags="${tags} --tag {{ registry }}/stub:latest"
     fi
 
     if [ "{{ container_runtime }}" = "podman" ]; then
@@ -89,7 +91,7 @@ oci:
 
     if [ "{{ container_runtime }}" = "podman" ] && [ "{{ push }}" = "true" ]; then
         {{ container_runtime }} push "${image}"
-        if [ "{{ latest }}" = "true" ]; then {{ container_runtime }} push "{{ registry }}/stub:latest{{ oci_suffix }}"; fi
+        if [ "{{ latest }}" = "true" ]; then {{ container_runtime }} push "{{ registry }}/stub:latest"; fi
     fi
 
 # Merge per-platform images into a multi-arch OCI index
