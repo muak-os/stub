@@ -108,6 +108,17 @@ merge *sources:
             ${tags} \
             {{ sources }}
 
+# Annotate an OCI image in the registry with per-entry sizes.
+[arg("image", long="image")]
+annotate image=(registry + "/stub:" + tag):
+    @printf "{{ cyan }}Annotating OCI image {{ image }}{{ reset }}\n"
+    {{ container_runtime }} run --rm --network=host \
+        -e KOCI_REGISTRY_USERNAME -e KOCI_REGISTRY_PASSWORD \
+        {{ tools }} \
+        /koci annotate \
+            --image "{{ image }}" \
+            --annotation dev.muak.sizes
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Testing
 # ─────────────────────────────────────────────────────────────────────────────

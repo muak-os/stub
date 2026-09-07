@@ -103,6 +103,23 @@ jobs:
         run: |
           just merge amd64=ci-amd64 arm64=ci-arm64
 
+      - name: Annotate image sizes (${{ steps.tag.outputs.tag }})
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          KOCI_REGISTRY_USERNAME: ${{ github.actor }}
+          KOCI_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          just annotate
+
+      - name: Annotate image sizes (latest)
+        if: ${{ startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.latest) }}
+        env:
+          TAG: latest
+          KOCI_REGISTRY_USERNAME: ${{ github.actor }}
+          KOCI_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          just annotate
+
       - name: Build summary
         run: |
           echo "### Multi-arch manifest created" >> "$GITHUB_STEP_SUMMARY"
