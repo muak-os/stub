@@ -15,13 +15,12 @@ set script-interpreter := ["bash", "-euo", "pipefail"]
 
 alpine_version := "3.24"
 rust_version := `grep -oP 'rust-version\s*=\s*"\K[^"]+' Cargo.toml`
+out := `test -f .git && realpath -m "$(git rev-parse --git-common-dir)/../_out" || realpath -m _out`
 registry := env_var_or_default("REGISTRY", "ghcr.io/muak-os")
 tag := env_var_or_default("TAG", "latest")
 tools := env_var_or_default("TOOLS", "ghcr.io/muak-os/tools:latest")
 push := env_var_or_default("PUSH", "false")
 latest := env_var_or_default("LATEST", "false")
-push_arg := if container_runtime == "podman" { "" } else { if push == "true" { "--push" } else { "" } }
-out := `test -f .git && realpath -m "$(git rev-parse --git-common-dir)/../_out" || realpath -m _out`
 
 # Architecture
 
@@ -33,6 +32,7 @@ oci_arch := if _arch == "arm64" { "arm64" } else { "amd64" }
 # Container runtime
 
 container_runtime := env_var_or_default("CONTAINER_RUNTIME", "podman")
+push_arg := if container_runtime == "podman" { "" } else { if push == "true" { "--push" } else { "" } }
 
 # Colors
 
