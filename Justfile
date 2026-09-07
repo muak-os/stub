@@ -1,6 +1,6 @@
 # Muak UEFI boot stub
 #
-# Prerequisites: rustup, docker/podman
+# Prerequisites: rustup, docker/podman, git
 # Run `just --list` for available recipes
 
 set positional-arguments := true
@@ -17,8 +17,10 @@ alpine_version := "3.24"
 rust_version := `grep -oP 'rust-version\s*=\s*"\K[^"]+' Cargo.toml`
 registry := env_var_or_default("REGISTRY", "ghcr.io/muak-os")
 tag := env_var_or_default("TAG", "latest")
+tools := env_var_or_default("TOOLS", "ghcr.io/muak-os/tools:latest")
 push := env_var_or_default("PUSH", "false")
 latest := env_var_or_default("LATEST", "false")
+push_arg := if container_runtime == "podman" { "" } else { if push == "true" { "--push" } else { "" } }
 out := `test -f .git && realpath -m "$(git rev-parse --git-common-dir)/../_out" || realpath -m _out`
 
 # Architecture
@@ -53,6 +55,10 @@ build release="":
     CARGO_BUILD_SBOM=true cargo build {{ release }} -Z sbom --target {{ arch }}-unknown-uefi --features uefi
     printf "{{ green }}Stub built successfully!{{ reset }}\n"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# OCI Images
+# ─────────────────────────────────────────────────────────────────────────────
+
 # Build (and optionally push) the stub OCI image
 [script]
 oci:
@@ -64,14 +70,8 @@ oci:
 
     if [ "{{ container_runtime }}" = "podman" ]; then
         cmd="podman build"
-        push_flags=""
     else
         cmd="docker buildx build --provenance=false"
-        if [ "{{ push }}" = "true" ]; then
-            push_flags="--push"
-        else
-            push_flags=""
-        fi
     fi
 
     printf "{{ cyan }}Building stub image: {{ registry }}/stub (push={{ push }}, latest={{ latest }}){{ reset }}\n"
@@ -81,7 +81,7 @@ oci:
         --build-arg ALPINE_VERSION={{ alpine_version }} \
         --build-arg RUST_VERSION={{ rust_version }} \
         --build-arg SOURCE_DATE_EPOCH=0 \
-        ${push_flags} \
+        {{ push_arg }} \
         $(just _cache-from stub) $(just _cache-to stub) \
         ${tags} \
         --file Dockerfile \
@@ -91,6 +91,22 @@ oci:
         {{ container_runtime }} push "${image}"
         if [ "{{ latest }}" = "true" ]; then {{ container_runtime }} push "{{ registry }}/stub:latest{{ oci_suffix }}"; fi
     fi
+
+# Merge per-platform images into a multi-arch OCI index
+[script]
+merge *sources:
+    tags=""
+    if [ "{{ latest }}" = "true" ]; then
+        tags="--tag latest"
+    fi
+    {{ container_runtime }} run --rm --network=host \
+        -e KOCI_REGISTRY_USERNAME -e KOCI_REGISTRY_PASSWORD \
+        {{ tools }} \
+        /koci merge \
+            --image "{{ registry }}/stub" \
+            --tag "{{ tag }}" \
+            ${tags} \
+            {{ sources }}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Testing
