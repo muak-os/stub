@@ -2,6 +2,8 @@
 
 use object::pe::IMAGE_DIRECTORY_ENTRY_BASERELOC;
 
+use super::kernel::EXPECTED_MACHINE;
+
 pub(crate) const FILE_ALIGN_U32: u32 = 0x200;
 
 const FILE_ALIGN: usize = 0x200;
@@ -26,7 +28,7 @@ impl Builder {
         Self::write_bytes(&mut data, NT_OFFSET, b"PE");
 
         let file_header = Self::offset(NT_OFFSET, 4);
-        Self::write_u16(&mut data, file_header, 0x8664);
+        Self::write_u16(&mut data, file_header, EXPECTED_MACHINE);
         Self::write_u16(&mut data, Self::offset(file_header, 16), 0xF0);
         Self::write_u16(&mut data, Self::offset(file_header, 18), 0x0002);
 
@@ -103,6 +105,10 @@ impl Builder {
             Self::offset(OPT_OFF, 56),
             Self::usize_to_u32(new_image_size),
         );
+    }
+
+    pub(crate) fn set_machine(&mut self, value: u16) {
+        Self::write_u16(&mut self.data, Self::offset(NT_OFFSET, 4), value);
     }
 
     pub(crate) fn set_last_ptr_relocs(&mut self, ptr: u32) {

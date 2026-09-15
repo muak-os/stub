@@ -9,6 +9,16 @@ use object::pe::{
 };
 use object::read::pe::{ImageNtHeaders as _, SectionTable};
 
+/// `IMAGE_FILE_MACHINE` value required for kernels loaded by this target.
+#[cfg(target_arch = "x86_64")]
+pub(crate) const EXPECTED_MACHINE: u16 = object::pe::IMAGE_FILE_MACHINE_AMD64;
+/// `IMAGE_FILE_MACHINE` value required for kernels loaded by this target.
+#[cfg(target_arch = "aarch64")]
+pub(crate) const EXPECTED_MACHINE: u16 = object::pe::IMAGE_FILE_MACHINE_ARM64;
+/// `IMAGE_FILE_MACHINE` value required for kernels loaded by this target.
+#[cfg(target_arch = "riscv64")]
+pub(crate) const EXPECTED_MACHINE: u16 = object::pe::IMAGE_FILE_MACHINE_RISCV64;
+
 /// `IMAGE_DLLCHARACTERISTICS_NX_COMPAT`.
 const NX_COMPAT: u16 = 0x0100;
 
@@ -41,6 +51,13 @@ impl<'a> Image<'a> {
         let sections = nt_headers
             .sections(data, offset)
             .context("invalid section table")?;
+
+        let machine = nt_headers.file_header.machine.get(LE);
+        ensure!(
+            machine == EXPECTED_MACHINE,
+            "kernel PE machine 0x{machine:04x} is not supported on this target \
+             (expected 0x{EXPECTED_MACHINE:04x})"
+        );
 
         let optional_header = &nt_headers.optional_header;
         let entry_point_rva = optional_header.address_of_entry_point.get(LE);
@@ -125,6 +142,21 @@ mod tests {
 
         // ASSERT
         assert!(err.to_string().contains("invalid PE headers"), "{err}");
+    }
+
+    #[test]
+    fn parse_wrong_machine_rejected() {
+        // ARRANGE
+        let mut builder = Builder::new();
+        builder.add_section(*b".text\0\0\0", &[0_u8; 16]);
+        builder.set_machine(0);
+        let data = builder.build();
+
+        // ACT
+        let err = Image::parse(&data).unwrap_err();
+
+        // ASSERT
+        assert!(err.to_string().contains("machine"), "{err}");
     }
 
     #[test]
