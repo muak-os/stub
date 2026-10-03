@@ -18,7 +18,7 @@ rust_version := `grep -oP 'rust-version\s*=\s*"\K[^"]+' Cargo.toml`
 out := `test -f .git && realpath -m "$(git rev-parse --git-common-dir)/../_out" || realpath -m _out`
 registry := env_var_or_default("REGISTRY", "ghcr.io/muak-os")
 tag := env_var_or_default("TAG", "latest")
-tools := env_var_or_default("TOOLS", registry + "/tools:latest")
+toolchain := env_var_or_default("TOOLCHAIN", "ghcr.io/muak-os/toolchain@sha256:aa9208691a4799dc34b42acb9a14aef4d7599d554ecaac1e36c9c76319cbd960")
 push := env_var_or_default("PUSH", "true")
 latest := env_var_or_default("LATEST", "false")
 
@@ -103,7 +103,7 @@ merge *sources:
     fi
     {{ container_runtime }} run --rm --network=host \
         -e KOCI_REGISTRY_USERNAME -e KOCI_REGISTRY_PASSWORD \
-        {{ tools }} \
+        {{ toolchain }} \
         /koci merge \
             --image "{{ registry }}/stub" \
             --tag "{{ tag }}" \
@@ -116,7 +116,7 @@ annotate image=(registry + "/stub:" + tag):
     @printf "{{ cyan }}Annotating OCI image {{ image }}{{ reset }}\n"
     {{ container_runtime }} run --rm --network=host \
         -e KOCI_REGISTRY_USERNAME -e KOCI_REGISTRY_PASSWORD \
-        {{ tools }} \
+        {{ toolchain }} \
         /koci annotate \
             --image "{{ image }}" \
             --annotation dev.muak.sizes
