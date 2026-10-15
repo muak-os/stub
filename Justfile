@@ -17,10 +17,9 @@ alpine_version := "3.24"
 rust_version := `grep -oP 'rust-version\s*=\s*"\K[^"]+' Cargo.toml`
 out := `test -f .git && realpath -m "$(git rev-parse --git-common-dir)/../_out" || realpath -m _out`
 registry := env_var_or_default("REGISTRY", "ghcr.io/muak-os")
-tag := env_var_or_default("TAG", "latest")
+tag := env_var_or_default("TAG", "dev")
 toolchain := env_var_or_default("TOOLCHAIN", "ghcr.io/muak-os/toolchain@sha256:b5202e06f797ab99a766617238d181fede148fa8f83a15d218b33599752de4fa")
 push := env_var_or_default("PUSH", "true")
-latest := env_var_or_default("LATEST", "false")
 
 # Architecture
 
@@ -66,9 +65,6 @@ build release="":
 oci:
     image="{{ registry }}/stub:{{ tag }}"
     tags="--tag ${image}"
-    if [ "{{ latest }}" = "true" ]; then
-        tags="${tags} --tag {{ registry }}/stub:latest"
-    fi
 
     if [ "{{ container_runtime }}" = "podman" ]; then
         cmd="podman build"
@@ -76,7 +72,7 @@ oci:
         cmd="docker buildx build --provenance=false"
     fi
 
-    printf "{{ cyan }}Building stub image: {{ registry }}/stub (push={{ push }}, latest={{ latest }}){{ reset }}\n"
+    printf "{{ cyan }}Building stub image: {{ registry }}/stub (push={{ push }}){{ reset }}\n"
     ${cmd} \
         --platform=linux/{{ oci_arch }} \
         --progress=auto \
@@ -91,23 +87,17 @@ oci:
 
     if [ "{{ container_runtime }}" = "podman" ] && [ "{{ push }}" = "true" ]; then
         {{ container_runtime }} push "${image}"
-        if [ "{{ latest }}" = "true" ]; then {{ container_runtime }} push "{{ registry }}/stub:latest"; fi
     fi
 
 # Merge per-platform images into a multi-arch OCI index
 [script]
 merge *sources:
-    tags=""
-    if [ "{{ latest }}" = "true" ]; then
-        tags="--tag latest"
-    fi
     {{ container_runtime }} run --rm --network=host \
         -e KOCI_REGISTRY_USERNAME -e KOCI_REGISTRY_PASSWORD \
         {{ toolchain }} \
         /koci merge \
             --image "{{ registry }}/stub" \
             --tag "{{ tag }}" \
-            ${tags} \
             {{ sources }}
 
 # Repack an OCI image's layers into eStargz, in place.

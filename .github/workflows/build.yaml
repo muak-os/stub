@@ -6,11 +6,6 @@ on:
       - "v[0-9]+.*"
   workflow_dispatch:
     inputs:
-      latest:
-        description: "Tag the image as latest"
-        required: false
-        type: boolean
-        default: false
       tag:
         description: "Tag to build (defaults to current commit)"
         required: false
@@ -92,7 +87,6 @@ jobs:
       - name: Create multi-arch manifest (${{ steps.tag.outputs.tag }})
         env:
           TAG: ${{ steps.tag.outputs.tag }}
-          LATEST: ${{ startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.latest) }}
           KOCI_REGISTRY_USERNAME: ${{ github.actor }}
           KOCI_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -106,19 +100,7 @@ jobs:
         run: |
           just repack
 
-      - name: Repack image layers (latest)
-        if: ${{ startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.latest) }}
-        env:
-          TAG: latest
-          KOCI_REGISTRY_USERNAME: ${{ github.actor }}
-          KOCI_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          just repack
-
       - name: Build summary
         run: |
           echo "### Multi-arch manifest created" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Tag:** \`stub:${{ steps.tag.outputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
-          if [[ "${{ startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.latest) }}" == "true" ]]; then
-            echo "- **Latest:** \`stub:latest\`" >> "$GITHUB_STEP_SUMMARY"
-          fi
