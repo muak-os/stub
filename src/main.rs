@@ -9,6 +9,7 @@ mod policy;
 mod security;
 #[cfg(feature = "tpm")]
 mod tpm2;
+mod vars;
 
 use core::slice;
 use std::os::uefi as uefi_std;
@@ -53,6 +54,8 @@ fn main() -> Result<()> {
 
     let loaded_image = open_protocol_exclusive::<LoadedImage>(image_handle)
         .context("Failed to open LoadedImage protocol")?;
+
+    vars::export(loaded_image.device());
 
     info!(
         "Setup Mode: {}",

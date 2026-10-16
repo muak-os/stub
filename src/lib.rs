@@ -9,3 +9,4 @@ pub mod policy;
 pub mod security;
 #[cfg(feature = "tpm")]
 pub mod tpm2;
+pub mod vars;
