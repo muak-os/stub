@@ -2,7 +2,7 @@
 name = "stub"
 description = "UEFI boot stub for Unified Kernel Images"
 edition = "2024"
-version = "1.0.1-beta"
+version = "1.0.2-beta"
 rust-version = "1.98"
 license = "Apache-2.0"
 repository = "https://github.com/muak-os/stub"
@@ -27,7 +27,7 @@ anyhow = "1.0"
 base64ct = { version = "1.8", features = ["std"] }
 
 # Internal
-uki = { git = "https://github.com/muak-os/muak.git", rev = "f0197b51a4cb2ce12bbb74471d4977402346a862", default-features = false }
+uki = { git = "https://github.com/muak-os/muak.git", rev = "4e83afaa3a8076f729493771fa2e18dd5387fc16", default-features = false }
 
 # System/platform APIs
 uefi = "0.40"

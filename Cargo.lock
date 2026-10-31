@@ -163,7 +163,7 @@ dependencies = [
 
 [[package]]
 name = "stub"
-version = "1.0.1-beta"
+version = "1.0.2-beta"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -274,8 +274,8 @@ checksum = "0c8352f8c05e47892e7eaf13b34abd76a7f4aeaf817b716e88789381927f199c"
 
 [[package]]
 name = "uki"
-version = "1.0.0-beta"
-source = "git+https://github.com/muak-os/muak.git?rev=f0197b51a4cb2ce12bbb74471d4977402346a862#f0197b51a4cb2ce12bbb74471d4977402346a862"
+version = "0.0.0"
+source = "git+https://github.com/muak-os/muak.git?rev=4e83afaa3a8076f729493771fa2e18dd5387fc16#4e83afaa3a8076f729493771fa2e18dd5387fc16"
 dependencies = [
  "object",
  "sha2",
